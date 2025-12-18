@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sade Sati Analizi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0fdfa; }
+        .fade-in { animation: fadeIn 0.6s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-800">
+
+    <main class="flex-grow flex items-center justify-center p-4">
+        <div class="w-full max-w-3xl bg-white rounded-2xl shadow-xl border-t-8 border-teal-600 overflow-hidden">
+            
+            <!-- Header -->
+            <div class="bg-teal-50 p-6 md:p-8 text-center border-b border-teal-100">
+                <h1 class="text-2xl md:text-3xl font-bold text-teal-900 mb-2">Vedik Astroloji Sade Sati Dönemi Hesaplayıcı</h1>
+                <p class="text-teal-700 text-sm">Doğum bilgilerinizi girerek Sade Sati analizinizi öğrenin.</p>
+            </div>
+
+            <div class="p-6 md:p-8 space-y-8">
+                
+                <!-- Form -->
+                <form id="astroForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Doğum Tarihi -->
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Doğum Tarihi (Gün / Ay / Yıl)</label>
+                        <div class="flex space-x-2">
+                            <input type="number" id="day" placeholder="GG" min="1" max="31" required class="w-full p-3 bg-gray-50 border rounded-lg text-center focus:ring-2 focus:ring-teal-500 outline-none transition">
+                            <input type="number" id="month" placeholder="AA" min="1" max="12" required class="w-full p-3 bg-gray-50 border rounded-lg text-center focus:ring-2 focus:ring-teal-500 outline-none transition">
+                            <input type="number" id="year" placeholder="YYYY" min="1950" max="2050" required class="w-full p-3 bg-gray-50 border rounded-lg text-center focus:ring-2 focus:ring-teal-500 outline-none transition">
+                        </div>
+                    </div>
+
+                    <!-- Saat (Yardımcı Metin ile) -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Doğum Saati</label>
+                        <input type="time" id="time" class="w-full p-3 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition">
+                        <div id="timeHelper" class="text-xs text-teal-600 mt-1 font-medium h-4">Bilinmiyorsa 12:00 alınır.</div>
+                    </div>
+
+                    <!-- Yer / Şehir Arama -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Doğum Yeri (Şehir)</label>
+                        <input type="text" id="cityInput" list="cityList" placeholder="Şehir yazın..." class="w-full p-3 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition" required>
+                        <datalist id="cityList">
+                            <!-- JS ile doldurulacak -->
+                        </datalist>
+                        <input type="hidden" id="timezone" value="3"> <!-- Varsayılan Türkiye -->
+                    </div>
+
+                    <div class="col-span-1 md:col-span-2 mt-2">
+                        <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-[1.01]">
+                            Analizi Başlat
+                        </button>
+                    </div>
+                </form>
+
+                <!-- SONUÇ ALANI -->
+                <div id="results" class="hidden space-y-6 fade-in border-t pt-6">
+                    
+                    <!-- Bilgi Kartları -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Natal Ay -->
+                        <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-100 text-center">
+                            <p class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Natal Ay Burcunuz</p>
+                            <h2 id="moonSign" class="text-2xl font-bold text-indigo-900">...</h2>
+                            <p id="nakshatra" class="text-sm text-indigo-600 mt-1 font-medium">...</p>
+                        </div>
+                        
+                        <!-- Transit Satürn -->
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 text-center relative overflow-hidden">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Şu Anki Satürn (Transit)</p>
+                            <h2 id="saturnSign" class="text-2xl font-bold text-slate-800">...</h2>
+                            <p id="currentDateDisplay" class="text-xs text-slate-500 mt-1">...</p>
+                        </div>
+                    </div>
+
+                    <!-- Sade Sati Durumu -->
+                    <div id="sadeSatiCard" class="bg-white p-6 rounded-xl border-l-8 shadow-sm">
+                        <div class="flex items-center mb-4">
+                            <div id="statusIcon" class="text-3xl mr-4"></div>
+                            <div>
+                                <h3 id="statusTitle" class="text-xl font-bold text-gray-800"></h3>
+                                <p id="statusSubtitle" class="text-sm text-gray-500"></p>
+                            </div>
+                        </div>
+                        
+                        <!-- Genel Evre Tanımı (Rehber Bölüm 2) -->
+                        <div id="phaseGeneralText" class="mb-4 p-3 bg-white/50 rounded-lg text-sm text-gray-600 italic border-l-2 border-gray-300 hidden"></div>
+
+                        <div id="analysisText" class="text-gray-700 text-sm leading-relaxed space-y-3 pl-2 border-l border-gray-100"></div>
+
+                        <!-- Kritik Uyarı Kutusu (Rehber Bölüm 2.2.1) -->
+                        <div id="criticalWarning" class="hidden mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+                            <div class="flex items-start">
+                                <span class="text-2xl mr-2">⚠️</span>
+                                <div>
+                                    <strong class="block mb-1 font-bold">ASTROLOJİK UYARI: Zirve Dönemi</strong>
+                                    <p class="mb-2"><strong>Evlilik Kararları:</strong> Geleneksel Vedik Astroloji, Satürn'ün Ay ile kavuşum yaptığı bu dönemde evlilik gibi büyük birlikteliklerin başlatılmasını tavsiye etmez. Satürn "ayırıcı" etkisiyle ilişkilerde soğukluk yaratabilir.</p>
+                                    <p><strong>Çocuk Sahibi Olma:</strong> Bu dönemde Satürn'ün Ay üzerindeki baskısı, hamilelik sürecinde fiziksel zorluklara veya anksiyeteye neden olabilir. Tıbbi kontrollerinizi aksatmamalısınız.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Gelecek Tahmini / Evre Geçişleri Kutusu -->
+                        <div id="futurePrediction" class="hidden mt-4 p-4 bg-teal-50 rounded-lg border border-teal-100 text-sm text-teal-800 space-y-2"></div>
+                    </div>
+
+                </div>
+            </div>
+            
+            <!-- Footer Notu -->
+            <div class="bg-gray-50 p-6 text-center text-xs text-gray-500 border-t border-gray-200 leading-relaxed">
+                <p>Bu analiz, doğum tarihiniz ve saatiniz üzerinden hesaplanan 'Ay Burcu'nuzu temel almaktadır. Vedik Astroloji'de kesin öngörüler için 'Yükselen Burç' (Lagna) ve gezegenlerin derecesel görünümleri (Drishti) ile Dashas (zaman periyotları) hayati önem taşır. Bu araç genel bir yol haritası sunar; hayati kararlar almadan önce detaylı harita analizi için profesyonel bir Vedik Astroloğa başvurmanız tavsiye edilir.</p>
+                <p class="mt-2">Danışmanlık talepleriniz için <a href="https://vedikastrolog.com/hizmetler/" target="_blank" class="text-teal-600 font-bold hover:underline hover:text-teal-800">buraya</a> tıklayabilirsiniz.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- ŞEHİR VERİTABANI VE SAAT DİLİMLERİ ---
+        const CITIES = [
+            // TÜRKİYE (Tümü UTC+3)
+            { name: "Adana", tz: 3 }, { name: "Adıyaman", tz: 3 }, { name: "Afyonkarahisar", tz: 3 }, { name: "Ağrı", tz: 3 },
+            { name: "Amasya", tz: 3 }, { name: "Ankara", tz: 3 }, { name: "Antalya", tz: 3 }, { name: "Artvin", tz: 3 },
+            { name: "Aydın", tz: 3 }, { name: "Balıkesir", tz: 3 }, { name: "Bilecik", tz: 3 }, { name: "Bingöl", tz: 3 },
+            { name: "Bitlis", tz: 3 }, { name: "Bolu", tz: 3 }, { name: "Burdur", tz: 3 }, { name: "Bursa", tz: 3 },
+            { name: "Çanakkale", tz: 3 }, { name: "Çankırı", tz: 3 }, { name: "Çorum", tz: 3 }, { name: "Denizli", tz: 3 },
+            { name: "Diyarbakır", tz: 3 }, { name: "Edirne", tz: 3 }, { name: "Elazığ", tz: 3 }, { name: "Erzincan", tz: 3 },
+            { name: "Erzurum", tz: 3 }, { name: "Eskişehir", tz: 3 }, { name: "Gaziantep", tz: 3 }, { name: "Giresun", tz: 3 },
+            { name: "Gümüşhane", tz: 3 }, { name: "Hakkari", tz: 3 }, { name: "Hatay", tz: 3 }, { name: "Isparta", tz: 3 },
+            { name: "Mersin", tz: 3 }, { name: "İstanbul", tz: 3 }, { name: "İzmir", tz: 3 }, { name: "Kars", tz: 3 },
+            { name: "Kastamonu", tz: 3 }, { name: "Kayseri", tz: 3 }, { name: "Kırklareli", tz: 3 }, { name: "Kırşehir", tz: 3 },
+            { name: "Kocaeli", tz: 3 }, { name: "Konya", tz: 3 }, { name: "Kütahya", tz: 3 }, { name: "Malatya", tz: 3 },
+            { name: "Manisa", tz: 3 }, { name: "Kahramanmaraş", tz: 3 }, { name: "Mardin", tz: 3 }, { name: "Muğla", tz: 3 },
+            { name: "Muş", tz: 3 }, { name: "Nevşehir", tz: 3 }, { name: "Niğde", tz: 3 }, { name: "Ordu", tz: 3 },
+            { name: "Rize", tz: 3 }, { name: "Sakarya", tz: 3 }, { name: "Samsun", tz: 3 }, { name: "Siirt", tz: 3 },
+            { name: "Sinop", tz: 3 }, { name: "Sivas", tz: 3 }, { name: "Tekirdağ", tz: 3 }, { name: "Tokat", tz: 3 },
+            { name: "Trabzon", tz: 3 }, { name: "Tunceli", tz: 3 }, { name: "Şanlıurfa", tz: 3 }, { name: "Uşak", tz: 3 },
+            { name: "Van", tz: 3 }, { name: "Yozgat", tz: 3 }, { name: "Zonguldak", tz: 3 }, { name: "Aksaray", tz: 3 },
+            { name: "Bayburt", tz: 3 }, { name: "Karaman", tz: 3 }, { name: "Kırıkkale", tz: 3 }, { name: "Batman", tz: 3 },
+            { name: "Şırnak", tz: 3 }, { name: "Bartın", tz: 3 }, { name: "Ardahan", tz: 3 }, { name: "Iğdır", tz: 3 },
+            { name: "Yalova", tz: 3 }, { name: "Karabük", tz: 3 }, { name: "Kilis", tz: 3 }, { name: "Osmaniye", tz: 3 },
+            { name: "Düzce", tz: 3 },
+            // DÜNYA
+            { name: "Londra (İngiltere)", tz: 0 },
+            { name: "Berlin (Almanya)", tz: 1 },
+            { name: "Paris (Fransa)", tz: 1 },
+            { name: "Madrid (İspanya)", tz: 1 },
+            { name: "Roma (İtalya)", tz: 1 },
+            { name: "Atina (Yunanistan)", tz: 2 },
+            { name: "Kahire (Mısır)", tz: 2 },
+            { name: "Moskova (Rusya)", tz: 3 },
+            { name: "Bakü (Azerbaycan)", tz: 4 },
+            { name: "Dubai (BAE)", tz: 4 },
+            { name: "New York (ABD)", tz: -5 },
+            { name: "Los Angeles (ABD)", tz: -8 },
+            { name: "Toronto (Kanada)", tz: -5 },
+            { name: "Yeni Delhi (Hindistan)", tz: 5.5 },
+            { name: "Tokyo (Japonya)", tz: 9 },
+            { name: "Pekin (Çin)", tz: 8 },
+            { name: "Sidney (Avustralya)", tz: 10 }
+        ];
+
+        // --- VEDİK VERİLERİ ---
+        const SIGNS = ["Koç", "Boğa", "İkizler", "Yengeç", "Aslan", "Başak", "Terazi", "Akrep", "Yay", "Oğlak", "Kova", "Balık"];
+        const NAKSHATRAS = [
+            "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra",
+            "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni",
+            "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
+            "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha",
+            "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
+        ];
+
+        // --- SATÜRN TRANSİT TABLOSU (1950-2050) ---
+        const SATURN_TRANSIT_TABLE = [
+            ["1950-01-01", 4], ["1950-09-18", 5], ["1952-08-23", 6], ["1954-11-12", 7],
+            ["1957-02-09", 8], ["1959-05-18", 8], ["1960-02-01", 9], ["1961-09-17", 9],
+            ["1961-10-07", 9], ["1964-01-27", 10], ["1966-04-09", 11], ["1968-06-17", 0],
+            ["1968-09-28", 11], ["1969-03-07", 0], ["1971-04-28", 1], ["1973-06-10", 2],
+            ["1975-07-23", 3], ["1977-09-07", 4], ["1979-11-04", 5], ["1980-03-15", 4],
+            ["1980-07-27", 5], ["1982-10-06", 6], ["1984-12-21", 7], ["1985-06-01", 6],
+            ["1985-09-17", 7], ["1987-12-17", 8], ["1990-03-21", 9], ["1990-06-20", 9],
+            ["1990-12-15", 9], ["1993-03-05", 10], ["1993-10-15", 9], ["1993-11-09", 10],
+            ["1995-06-02", 11], ["1995-08-10", 10], ["1996-02-16", 11], ["1998-04-17", 0],
+            ["1998-06-07", 11], ["1999-01-14", 0], ["2000-06-06", 1], ["2002-07-23", 2],
+            ["2003-01-08", 2], ["2003-04-07", 2], ["2004-09-06", 3], ["2005-01-13", 2],
+            ["2005-05-26", 3], ["2006-11-01", 4], ["2007-01-10", 3], ["2007-07-15", 4],
+            ["2009-09-10", 5], ["2011-11-15", 6], ["2012-05-16", 6], ["2012-08-04", 6],
+            ["2014-11-02", 7], ["2017-01-26", 8], ["2017-06-21", 7], ["2017-10-26", 8],
+            ["2020-01-24", 9], ["2022-04-29", 10], ["2022-07-12", 9], ["2023-01-17", 10],
+            ["2025-03-29", 11], ["2025-09-01", 11], ["2027-06-03", 0], ["2027-10-20", 11],
+            ["2028-02-23", 0], ["2029-08-08", 1], ["2029-10-05", 0], ["2030-04-17", 1],
+            ["2032-05-31", 2], ["2034-07-13", 3], ["2036-08-27", 4], ["2039-10-22", 5],
+            ["2041-01-28", 6], ["2041-02-06", 5], ["2041-09-26", 6], ["2043-12-11", 7],
+            ["2046-12-08", 8], ["2049-02-25", 9], ["2051-01-01", 9]
+        ];
+
+        // SADE SATİ YORUMLARI
+        const SADE_SATI_TEXTS = {
+            "Koç": { 
+                p1: "Satürn 12. evinizde hareket ediyor. Bu süreçte kendinizi çevrenizden biraz izole etmek isteyebilir veya yalnız kalma ihtiyacı hissedebilirsiniz. Bilinçaltınızın derinliklerinde yatan endişeler su yüzüne çıkabilir, bu da zaman zaman uyku düzensizliklerine veya açıklanamayan huzursuzluklara yol açabilir. Ayak bölgenizde hassasiyet hissedebilirsiniz.", 
+                p2: "Satürn Ay burcunuzun üzerinde, Sade Sati'nin Pik Dönemindesiniz. Bu dönemde hayatın sizi bir miktar yavaşlattığını ve sabrınızı sınadığını hissedebilirsiniz. Özellikle kariyer hedefleriniz ve kişisel kimliğinizle ilgili konularda baskı altında olduğunuzu düşünebilirsiniz. Baş ağrıları veya fiziksel enerjide dalgalanmalar yaşanabilir.", 
+                p3: "Satürn 2. evinizde, yani maddi kaynaklar alanınızda. Bu evrede finansal konular ve ailevi değerler ön plana çıkabilir. Maddi kazanımlarınızda yavaşlamalar veya harcamalarınızda beklenmedik artışlar hissedebilirsiniz. Aile içi iletişimde kelimelerinizi daha özenli seçmeniz gerekebilir." 
+            },
+            "Boğa": { 
+                p1: "Satürn 12. evinizde transit yapıyor. Bu dönemde kontrol dışı harcamalar veya beklenmedik masraflarla karşılaşabilirsiniz. Zihinsel olarak kendinizi biraz dağılmış hissedebilir, iç dünyanıza dönme ihtiyacı duyabilirsiniz.", 
+                p2: "Satürn burcunuzun üzerinde, yani Sade Sati'nin Pik Dönemindesiniz. Omuzlarınızdaki sorumluluk yükünün arttığını hissedebilirsiniz. Hayat size daha ciddi ve disiplinli olmanız gerektiğini hatırlatabilir. Bu süreçte iştah değişimleri veya boğaz bölgesi hassasiyetleri yaşayabilirsiniz.", 
+                p3: "Sade Sati'nin son evresinde Satürn iletişim evinize geçiyor. Yakın çevreniz, kardeşleriniz veya komşularınızla olan ilişkilerinizde mesafeler oluşabilir veya yanlış anlaşılmalar yaşayabilirsiniz. Zihinsel olarak kendinizi daha fazla sorguladığınızı hissedebilirsiniz." 
+            },
+            "İkizler": { 
+                p1: "Satürn kariyer ve toplumsal statü evinizden 12. eve geçiyor. İş hayatınızda veya yatırımlarınızda bir duraklama veya yavaşlama hissedebilirsiniz. Nakit akışınızda daha dikkatli olmanız gereken bir dönem olabilir.", 
+                p2: "Pik dönemdesiniz. Kendinizi ifade etmekte zorlandığınızı veya fikirlerinizin yanlış anlaşıldığını hissedebilirsiniz. Sinir sisteminiz bu dönemde daha hassas olabilir, bu yüzden zihinsel dinlenmeye önem vermelisiniz.", 
+                p3: "Satürn 2. evinize, aile ve yuva alanınıza geçiyor. Aile içindeki duygusal bağlarda bir soğuma veya mesafe hissedebilirsiniz. Duygusal güvence ihtiyacınız artabilir ancak bunu bulmakta zorlanabilirsiniz." 
+            },
+            "Yengeç": { 
+                p1: "Satürn 12. evinizde. Zihninizde çok fazla düşünce dolaşabilir ve amaçsız bir koşturmaca içinde olduğunuzu hissedebilirsiniz. Uzak akrabalar veya yurt dışı bağlantılı konularda pürüzler yaşanabilir.", 
+                p2: "Satürn Ay'ınızın üzerinde, Sade Sati'nin en hassas dönemindesiniz. Duygusal olarak kendinizi biraz yalnız veya anlaşılmamış hissedebilirsiniz. Melankoliye yatkınlık olabilir. Aile büyükleriyle veya otorite figürleriyle olan ilişkilerinizde hassasiyetler yaşayabilirsiniz.", 
+                p3: "Son evrede Satürn miras, ortak kazançlar ve kök ailenizle ilgili konuları gündeme getirebilir. Aile mirası veya geçmişten gelen maddi konularla ilgili sorumluluklar almanız gerekebilir." 
+            },
+            "Aslan": { 
+                p1: "İçsel korkularınızla veya geçmiş travmalarınızla yüzleşmeniz gereken bir dönem olabilir. Sebebi belirsiz bir huzursuzluk hissi yaşayabilirsiniz. Rüyalarınız bu dönemde daha yoğun olabilir.", 
+                p2: "Pik dönemde Satürn egonuzu ve liderlik yeteneklerinizi sınıyor olabilir. Otoritenizin sorgulandığını veya takdir edilmediğinizi hissedebilirsiniz. Kalp sağlığınıza ve sırt bölgenize özen göstermeniz faydalı olacaktır.", 
+                p3: "Sade Sati'nin son evresinde, çevrenize ve ilişkilerinize karşı daha eleştirel bir bakış açısı geliştirebilirsiniz. Detaylara fazla takılmak sizi yorabilir. Eşiniz veya ortaklarınızla maddi konuları konuşurken gerginlik hissedebilirsiniz." 
+            },
+            "Başak": { 
+                p1: "İş ortamınızda veya sosyal çevrenizde arkanızdan dönen bazı olayları fark edebilirsiniz. Bu durum sizi insanlardan biraz uzaklaştırıp inzivaya çekilme isteği uyandırabilir.", 
+                p2: "Satürn burcunuzda, Sade Sati'nin pik dönemindesiniz. İşkoliklik derecesinde çalışma isteği duyabilir, detaylarda boğulabilirsiniz. Mükemmeliyetçiliğiniz bu dönemde sizi ve çevrenizi yorabilir. Sindirim sistemi hassasiyetleri yaşayabilirsiniz.", 
+                p3: "Satürn Terazi'ye, yani denge ve ilişkiler alanınıza geçiyor. Bu, Sade Sati'nin nispeten daha yapıcı bir evresidir. İlişkilerinizde daha ciddi ve kalıcı adımlar atabilirsiniz, ancak maddi konularda hala temkinli olmalısınız." 
+            },
+            "Terazi": { 
+                p1: "Sağlık konularına veya kişisel bakımınıza daha fazla harcama yapmanız gerekebilir. Hukuksal süreçler veya resmi işlerle ilgili gündemleriniz oluşabilir.", 
+                p2: "Pik dönemdesiniz ancak Satürn Terazi'de yüceldiği için bu dönem size büyük sorumluluklarla birlikte toplumsal statü de getirebilir. Liderlik sınavlarından geçebilirsiniz. İlişkilerde dengeyi kurmakta zorlanabilirsiniz.", 
+                p3: "Son evrede, aile içi sırlara veya gizli kalmış konulara şahit olabilirsiniz. Miras veya ortaklı paralarla ilgili tartışmalar yaşanabilir. Sözlerinizin keskinliği sevdiklerinizi kırabilir, dikkatli olmalısınız." 
+            },
+            "Akrep": { 
+                p1: "Yurt dışı, yabancılar veya spiritüel konularla ilgili harcamalarınız artabilir. Kendi kabuğunuza çekilmek ve dünyevi konulardan uzaklaşmak isteyebilirsiniz.", 
+                p2: "Ay Akrep'te düşüştedir, bu nedenle Sade Sati'nin bu pik evresini yoğun duygusal dalgalanmalarla yaşayabilirsiniz. Şüphecilik, kıskançlık veya kaybetme korkusu artabilir. Bu dönemde büyük risklerden kaçınmak ve ruhsal dengenizi korumak önemlidir.", 
+                p3: "Son evrede hayata bakış açınız ve değer yargılarınız köklü bir değişim geçirebilir. Maddi dünyadan ziyade manevi zenginliğe önem vermeye başlayabilirsiniz." 
+            },
+            "Yay": { 
+                p1: "Bilinçaltınızdaki korkularla yüzleşme zamanı. Evinizde veya güvenli alanınızda bile zaman zaman huzursuz hissedebilirsiniz. Geçmişten gelen konular tekrar gündeme gelebilir.", 
+                p2: "Pik dönemde hayata dair inançlarınızı ve felsefenizi sorgulayabilirsiniz. Eğitim, hukuk veya seyahatlerle ilgili konularda engellerle karşılaşabilirsiniz. Kalça veya bacak bölgesi ağrıları yaşanabilir.", 
+                p3: "Satürn kendi yönettiği Oğlak burcuna geçiyor. Bu son evre sizin için toparlanma ve sağlam temeller atma dönemidir. Finansal konularda daha disiplinli olacak ve kalıcı yapılar kurabileceksiniz." 
+            },
+            "Oğlak": { 
+                p1: "Bulunduğunuz ortamdan uzaklaşma, uzun yolculuklara çıkma veya yer değiştirme isteği duyabilirsiniz. Kardeşleriniz veya yakın çevrenizle ilgili sorumluluklar artabilir.", 
+                p2: "Satürn kendi evinde (Oğlak) olduğu için bu pik dönemi daha çok iş ve kariyer odaklı yaşayabilirsiniz. Duygularınızı bastırıp tamamen mantığınızla hareket etme eğiliminde olabilirsiniz. Toplumsal statünüz artabilir ancak duygusal yalnızlık hissedebilirsiniz.", 
+                p3: "Son evrede sosyal çevrenizden ve arkadaşlarınızdan maddi/manevi destek görebilirsiniz. Ancak hedeflerinize ulaşmak için sosyal ilişkilerinizi yeniden yapılandırmanız gerekebilir." 
+            },
+            "Kova": { 
+                p1: "İş hayatınızda kendinizi yalnız veya yük altında hissedebilirsiniz. Kurumsal yapılar içinde kaybolmuşluk hissi oluşabilir.", 
+                p2: "Pik dönemde toplumsal idealleriniz veya hedefleriniz uğruna kişisel isteklerinizden fedakarlık etmeniz gerekebilir. Arkadaş çevrenizle aranıza mesafeler girebilir veya çevreniz tamamen değişebilir.", 
+                p3: "Son evrede maddi kaynaklarınızı başkalarıyla paylaşmak durumunda kalabilirsiniz veya hayır işlerine yönelme isteği duyabilirsiniz. Ailevi harcamalar artabilir." 
+            },
+            "Balık": { 
+                p1: "Sosyal çevrenizin daraldığını, arkadaşlarınızla aranızdaki bağların zayıfladığını hissedebilirsiniz. Geleceğe dair umutlarınızda geçici bir karamsarlık oluşabilir.", 
+                p2: "Bu dönemde gerçeklerden kaçmak zorlaşabilir ve üzerinizde yoğun bir spiritüel baskı hissedebilirsiniz. Hayallerinizle gerçekler arasındaki uçurum sizi zorlayabilir. Ayak sağlığınıza ve uyku düzeninize dikkat etmelisiniz.", 
+                p3: "Sade Sati'nin son evresinde maddi konularda ani değişimler veya beklenmedik harcamalar gündeme gelebilir. İletişimde kırıcı olmamaya özen göstermelisiniz, zira sözleriniz geri dönülmez sonuçlar doğurabilir." 
+            }
+        };
+
+        // EV TEMALARI
+        const HOUSE_TRANSIT_EFFECTS = {
+            3: "Müjde! Satürn Ay'ınıza göre en verimli konumlardan birinde. Rakiplerinizi yeneceğiniz, sağlığınızın düzeleceği ve maddi kazançlarınızın artacağı bir yükseliş dönemindesiniz.",
+            4: "Satürn Ay'ınıza göre 4. evde. Bu, 'Dikenli Yatak' olarak bilinir. Ev huzuru kaçabilir, anne sağlığı gündeme gelebilir veya taşınma zorlukları yaşanabilir.",
+            5: "5. Ev (Yaratıcılık): Çocuklar, aşk hayatı ve spekülatif yatırımlar gündemde. Yaratıcılığınızı disipline etmeniz gereken bir dönem. Eğitim hayatında ciddiyet artar.",
+            6: "Müjde! Satürn Ay'ınıza göre en verimli konumlardan birinde. Rakiplerinizi yeneceğiniz, sağlığınızın düzeleceği ve maddi kazançlarınızın artacağı bir yükseliş dönemindesiniz.",
+            7: "7. Ev (Ortaklık): Evlilik, iş ortaklıkları ve ilişkiler testten geçer. İlişkilerde sorumluluk alma zamanı. Bekarlar için ciddi ama geç gelişen ilişkiler olabilir.",
+            8: "Satürn Ay'ınıza göre 8. evde. Bu transit, Sade Sati kadar zorlu kabul edilir. Ani bitişler, kronik sağlık sorunları ve dönüşümler yaşanır. Miras ve vergi konularında dikkatli olunmalıdır.",
+            9: "9. Ev (Şans): Baba, inançlar, yüksek eğitim ve uzun yolculuklar. Hayat felsefenizi ve inançlarınızı sorgulayabilir, daha geleneksel bir yapıya bürünebilirsiniz. Babanızla ilgili sorumluluklar artabilir.",
+            10: "10. Ev (Kariyer): Kariyer, statü ve toplumsal görünürlük. İş hayatında yükünüz artabilir ancak bu uzun vadede terfi veya saygınlık getirecektir. Çok çalışma dönemidir.",
+            11: "Müjde! Satürn Ay'ınıza göre en verimli konumlardan birinde. Rakiplerinizi yeneceğiniz, sağlığınızın düzeleceği ve maddi kazançlarınızın artacağı bir yükseliş dönemindesiniz."
+        };
+
+        // --- MATEMATİK MOTORU ---
+        const PI = Math.PI;
+        const RAD = PI / 180.0;
+        const DEG = 180.0 / PI;
+
+        function sind(x) { return Math.sin(x * RAD); }
+        function cosd(x) { return Math.cos(x * RAD); }
+        function rev(x) { return x - Math.floor(x / 360.0) * 360.0; }
+
+        function calcJD(d, m, y, h, min, tz) {
+            let decimalTime = h + (min / 60.0) - tz;
+            if (m <= 2) { y -= 1; m += 12; }
+            let A = Math.floor(y / 100);
+            let B = 2 - A + Math.floor(A / 4);
+            return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + decimalTime/24.0 + B - 1524.5;
+        }
+
+        function getLahiriAyanamsa(jd) {
+            let t = (jd - 2451545.0) / 36525.0; 
+            return 23.8547 + 1.396 * t;
+        }
+
+        function getMoonPos(jd) {
+            const d = jd - 2451545.0;
+            let L = rev(218.316 + 13.176396 * d);
+            let M = rev(134.963 + 13.064993 * d);
+            let l = L + 6.289 * sind(M);
+            return rev(l);
+        }
+
+        function getSaturnSignFromTable(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+
+            let currentSign = 0;
+            for (let i = 0; i < SATURN_TRANSIT_TABLE.length; i++) {
+                if (dateStr >= SATURN_TRANSIT_TABLE[i][0]) {
+                    currentSign = SATURN_TRANSIT_TABLE[i][1];
+                } else {
+                    break;
+                }
+            }
+            return currentSign;
+        }
+
+        // --- RETRO HAREKET KONTROLLÜ TARİH BULMA ---
+        function getPermanentTransitionDate(targetSignIdx, avoidSignIdx) {
+            // avoidSignIdx: Geri dönülmemesi gereken (terk edilen) burç
+            // targetSignIdx: Gitmek istediğimiz (yeni) burç
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            
+            // Tabloda bugünden sonraki kayıtları bul
+            let futureEntries = [];
+            for(let i=0; i<SATURN_TRANSIT_TABLE.length; i++) {
+                if (SATURN_TRANSIT_TABLE[i][0] > todayStr) {
+                    futureEntries.push({date: SATURN_TRANSIT_TABLE[i][0], sign: SATURN_TRANSIT_TABLE[i][1], index: i});
+                }
+            }
+
+            for (let i = 0; i < futureEntries.length; i++) {
+                const entry = futureEntries[i];
+                
+                if (entry.sign === targetSignIdx) {
+                    // Potansiyel tarih bulundu. Geleceğe bak (Lookahead).
+                    let isPermanent = true;
+                    // Orijinal tablodaki indeksi kullanarak sonraki kayıtlara bak
+                    for (let j = entry.index + 1; j < SATURN_TRANSIT_TABLE.length; j++) {
+                        const nextSign = SATURN_TRANSIT_TABLE[j][1];
+                        if (nextSign === avoidSignIdx) {
+                            isPermanent = false;
+                            break; // Geri dönüş var, bu tarihi atla
+                        }
+                    }
+                    
+                    if (isPermanent) {
+                        return entry.date;
+                    }
+                }
+            }
+            return null;
+        }
+
+
+        // --- SAYFA YÜKLENDİĞİNDE ŞEHİRLERİ DOLDUR ---
+        const datalist = document.getElementById('cityList');
+        CITIES.forEach(city => {
+            const option = document.createElement('option');
+            option.value = city.name;
+            datalist.appendChild(option);
+        });
+
+        // Şehir seçilince saat dilimini güncelle
+        document.getElementById('cityInput').addEventListener('change', function(e) {
+            const selectedName = e.target.value;
+            const city = CITIES.find(c => c.name === selectedName);
+            if (city) {
+                document.getElementById('timezone').value = city.tz;
+            }
+        });
+
+        // Saat Yardımı
+        document.getElementById('time').addEventListener('input', function(e) {
+            const val = e.target.value;
+            if(!val) {
+                document.getElementById('timeHelper').textContent = "Bilinmiyorsa 12:00 alınır.";
+                return;
+            }
+            const h = parseInt(val.split(':')[0]);
+            let text = "";
+            if(h >= 5 && h < 12) text = "Sabah";
+            else if(h >= 12 && h < 17) text = "Öğle / Öğleden Sonra";
+            else if(h >= 17 && h < 22) text = "Akşam";
+            else text = "Gece";
+            
+            document.getElementById('timeHelper').textContent = `Seçilen Zaman: ${text} (${val})`;
+        });
+
+        // --- SUBMIT ---
+        document.getElementById('astroForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const d = parseInt(document.getElementById('day').value);
+            const m = parseInt(document.getElementById('month').value);
+            const y = parseInt(document.getElementById('year').value);
+            let t = document.getElementById('time').value;
+            const cityVal = document.getElementById('cityInput').value;
+            
+            if(!cityVal) {
+                alert("Lütfen bir şehir seçiniz veya yazınız.");
+                return;
+            }
+            
+            const foundCity = CITIES.find(c => c.name.toLowerCase() === cityVal.toLowerCase());
+            let tz = 3; 
+            if (foundCity) {
+                tz = foundCity.tz;
+            }
+
+            if (!t) t = "12:00";
+            const [hh, mm] = t.split(':').map(Number);
+
+            const birthJD = calcJD(d, m, y, hh, mm, tz);
+            const birthAyanamsa = getLahiriAyanamsa(birthJD);
+            const moonTropical = getMoonPos(birthJD);
+            const moonSidereal = rev(moonTropical - birthAyanamsa);
+            const moonSignIdx = Math.floor(moonSidereal / 30);
+            const nakIdx = Math.floor(moonSidereal / 13.333333);
+
+            const now = new Date();
+            const saturnSignIdx = getSaturnSignFromTable(now);
+            const curDay = now.getDate();
+            const curMonth = now.getMonth() + 1;
+            const curYear = now.getFullYear();
+
+            document.getElementById('moonSign').textContent = SIGNS[moonSignIdx];
+            document.getElementById('nakshatra').textContent = NAKSHATRAS[nakIdx];
+            document.getElementById('saturnSign').textContent = SIGNS[saturnSignIdx];
+            document.getElementById('currentDateDisplay').textContent = `${curDay}.${curMonth}.${curYear} Tarihi İtibariyle`;
+
+            analyzeSadeSati(moonSignIdx, saturnSignIdx);
+
+            document.getElementById('results').classList.remove('hidden');
+        });
+
+        function analyzeSadeSati(moonIdx, saturnIdx) {
+            const moonSign = SIGNS[moonIdx];
+            const data = SADE_SATI_TEXTS[moonSign];
+
+            let relativeHouseIndex = (saturnIdx - moonIdx + 12) % 12; // 0-11
+            let currentHouse = relativeHouseIndex + 1; 
+
+            const card = document.getElementById('sadeSatiCard');
+            const icon = document.getElementById('statusIcon');
+            const title = document.getElementById('statusTitle');
+            const sub = document.getElementById('statusSubtitle');
+            const text = document.getElementById('analysisText');
+            const futureBox = document.getElementById('futurePrediction');
+            
+            const phaseGeneralText = document.getElementById('phaseGeneralText');
+            const criticalWarning = document.getElementById('criticalWarning');
+
+            futureBox.classList.add('hidden');
+            futureBox.innerHTML = '';
+            
+            phaseGeneralText.classList.add('hidden');
+            criticalWarning.classList.add('hidden');
+
+            let isInSadeSati = false;
+
+            if (relativeHouseIndex === 11) { // 12. EV - BAŞLANGIÇ
+                isInSadeSati = true;
+                card.className = "p-6 rounded-xl border-l-8 shadow-sm bg-orange-50 border-orange-500";
+                icon.textContent = "⚠️";
+                title.textContent = "Başlangıç Dönemi"; 
+                sub.textContent = `Satürn (${SIGNS[saturnIdx]}), Ay burcunuzdan (${moonSign}) bir önceki burçta (12. Ev).`;
+                
+                phaseGeneralText.textContent = "Sade Sati'nin ilk evresindesiniz. Bu dönem, 7.5 yıllık karmik döngünün başlangıç işaret fişeğidir. Sosyal çevrenizden uzaklaşma isteği duyabilir, sebepsiz bir yalnızlık hissine kapılabilirsiniz. Finansal açıdan, planlanmamış ve genellikle 'zaruri' harcamalar gündeme gelebilir. Vedik anatomiye göre bu transit ayakları ve uyku düzenini yönetir.";
+                phaseGeneralText.classList.remove('hidden');
+                
+                text.innerHTML = `<p class="font-bold text-orange-800 mb-2">Burcunuza Özel Etki:</p><p>${data.p1}</p>`;
+                
+            } else if (relativeHouseIndex === 0) { // 1. EV - PİK
+                isInSadeSati = true;
+                card.className = "p-6 rounded-xl border-l-8 shadow-sm bg-red-50 border-red-600";
+                icon.textContent = "🛑";
+                title.textContent = "Pik Dönemi"; 
+                sub.textContent = `Satürn (${SIGNS[saturnIdx]}), Ay burcunuzla (${moonSign}) aynı burçta (1. Ev).`;
+                
+                phaseGeneralText.textContent = "Şu anda Sade Sati'nin Zirve Evresindesiniz (Janma Shani). Satürn, doğrudan doğum Ay'ınızın üzerinde transit yapıyor. Baskı artık dış dünyadan iç dünyanıza (zihin ve beden) kaymış durumda. Kendinizi duygusal olarak ağırlaşmış, karamsar veya kısıtlanmış hissedebilirsiniz. Eski kimliğinizin parçalanıp, daha olgun bir benliğin inşası sürecindesiniz.";
+                phaseGeneralText.classList.remove('hidden');
+                
+                criticalWarning.classList.remove('hidden');
+
+                text.innerHTML = `<p class="font-bold text-red-800 mb-2">Burcunuza Özel Etki:</p><p>${data.p2}</p>`;
+                
+            } else if (relativeHouseIndex === 1) { // 2. EV - BİTİŞ
+                isInSadeSati = true;
+                card.className = "p-6 rounded-xl border-l-8 shadow-sm bg-yellow-50 border-yellow-500";
+                icon.textContent = "⏳";
+                title.textContent = "Bitiş Dönemi"; 
+                sub.textContent = `Satürn (${SIGNS[saturnIdx]}), Ay burcunuzdan (${moonSign}) bir sonraki burçta (2. Ev).`;
+                
+                phaseGeneralText.textContent = "Sade Sati'nin son evresindesiniz. Satürn, Ay'ınızdan sonraki 2. eve geçti. Zirve döneminin yoğun psikolojik baskısı hafiflemeye başlıyor, ancak odak noktası maddi kaynaklar ve aile ilişkilerine kayıyor. Finansal akış yavaş ancak istikrarlı bir yapıya kavuşur. Bu, 'enkaz kaldırma' ve 'yeni temeller atma' sürecidir.";
+                phaseGeneralText.classList.remove('hidden');
+
+                text.innerHTML = `<p class="font-bold text-yellow-800 mb-2">Burcunuza Özel Etki:</p><p>${data.p3}</p>`;
+                
+            } else {
+                let titleText = "Sade Sati Döneminde Değilsiniz";
+                let iconText = "✅";
+                let cardClass = "p-6 rounded-xl border-l-8 shadow-sm bg-teal-50 border-teal-500";
+
+                if (currentHouse === 4 || currentHouse === 8) {
+                    cardClass = "p-6 rounded-xl border-l-8 shadow-sm bg-orange-50 border-orange-500";
+                    iconText = "⚠️";
+                    titleText = currentHouse === 4 ? "Kantaka Shani" : "Ashtama Shani";
+                } 
+                else if (currentHouse === 3 || currentHouse === 6 || currentHouse === 11) {
+                    cardClass = "p-6 rounded-xl border-l-8 shadow-sm bg-green-50 border-green-600";
+                    iconText = "🌟";
+                    titleText = "Olumlu Transit Dönemi";
+                }
+
+                card.className = cardClass;
+                icon.textContent = iconText;
+                title.textContent = titleText;
+                sub.textContent = `Transit Satürn (${SIGNS[saturnIdx]}), Ay burcunuza (${moonSign}) göre ${currentHouse}. evde transit yapıyor.`;
+                
+                let houseEffect = HOUSE_TRANSIT_EFFECTS[currentHouse] || "Satürn'ün bu evdeki transiti nötr veya kişisel haritaya göre değişkenlik gösterir.";
+                
+                text.innerHTML = `
+                    <div class="bg-white p-3 rounded border border-gray-100 text-gray-800 font-medium">
+                        ${houseEffect}
+                    </div>
+                `;
+
+                // --- SADE SATİ DIŞINDAKİLER İÇİN SADECE BAŞLANGIÇ TARİHİ (KALICI GİRİŞ) ---
+                // Hedef: Ay - 1 (Sade Sati Başlangıcı)
+                // Avoid: Ay - 2 (Sade Sati öncesi) -> Buraya dönmemeli
+                const targetSadeSatiStart = (moonIdx - 1 + 12) % 12;
+                const avoidSadeSatiPre = (moonIdx - 2 + 12) % 12;
+                
+                const nextDate = getPermanentTransitionDate(targetSadeSatiStart, avoidSadeSatiPre);
+                if (nextDate) {
+                    const [ny, nm, nd] = nextDate.split('-');
+                    futureBox.innerHTML = `<strong>Gelecek Sade Sati Başlangıcı:</strong> ${nd}.${nm}.${ny}`;
+                    futureBox.classList.remove('hidden');
+                }
+            }
+
+            // --- SADE SATİ İÇİNDEKİLER İÇİN BİR SONRAKİ EVRE BAŞLANGIÇ TARİHİ (KALICI) ---
+            if (isInSadeSati) {
+                let targetSignIdx = -1;
+                let avoidSignIdx = -1;
+                let messagePrefix = "";
+
+                if (relativeHouseIndex === 11) { // 1. Evredeyiz (12. Ev), Hedef: 1. Ev (MoonIdx) -> 2. Evre
+                     targetSignIdx = moonIdx;
+                     avoidSignIdx = (moonIdx - 1 + 12) % 12; // 12. Eve geri dönmemeli
+                     messagePrefix = "2. Evre (Pik Dönem) Başlangıcı";
+                } else if (relativeHouseIndex === 0) { // 2. Evredeyiz (1. Ev), Hedef: 2. Ev (MoonIdx + 1) -> 3. Evre
+                     targetSignIdx = (moonIdx + 1) % 12;
+                     avoidSignIdx = moonIdx; // 1. Eve geri dönmemeli
+                     messagePrefix = "3. Evre (Bitiş Dönemi) Başlangıcı";
+                } else if (relativeHouseIndex === 1) { // 3. Evredeyiz (2. Ev), Hedef: 3. Ev (MoonIdx + 2) -> Sade Sati Sonu
+                     targetSignIdx = (moonIdx + 2) % 12;
+                     avoidSignIdx = (moonIdx + 1) % 12; // 2. Eve geri dönmemeli
+                     messagePrefix = "Sade Sati Bitiş Tarihi";
+                }
+
+                const nextDate = getPermanentTransitionDate(targetSignIdx, avoidSignIdx);
+                if (nextDate) {
+                     const [ny, nm, nd] = nextDate.split('-');
+                     futureBox.innerHTML = `<strong>${messagePrefix}:</strong> ${nd}.${nm}.${ny}`;
+                     futureBox.classList.remove('hidden');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
